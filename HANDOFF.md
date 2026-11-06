@@ -1,10 +1,30 @@
 # HANDOFF (2026-11-06)
-Status: Harness built; SmolVLA fp16 reference done on NUC (local); Jetson unreachable overnight; X-VLA needs LIBERO processor wiring
-Next: Fix `jetson` ssh access from the NUC, then rsync, smoke test, SmolVLA calibration row
-Updated: 2026-11-06 (overnight run)
+Status: Harness built; SmolVLA fp16 reference done on NUC (local); X-VLA LIBERO wiring done and shape-checked on NUC; Jetson still unreachable from my session
+Next: When NUC->Jetson ssh works: HANDOFF steps 1-3 (rsync, smoke, SmolVLA calibration row). Then X-VLA NUC reference run once the GPU is free
+Updated: 2026-11-06 (daytime run, branch day-1106, not pushed)
 
 Session stopped at the owner's request. No benchmark rows exist yet. The first stop point
 (calibration row + SmolVLA, X-VLA, Evo-1 rows) is **not** reached.
+
+## Decisions taken (day-1106, daytime run)
+- **Owner decisions recorded**: vla.cpp rows are "as shipped" (PLAN.md "Precision labels"). X-VLA uses
+  eetmie's TensorRT export if the license allows: `gh api repos/eetmie/jetson-orin-nano-vla/license` says MIT, so
+  it is allowed. Credited in THIRD_PARTY.md (pinned 6aa4a151), row label "TensorRT export by eetmie", PLAN.md updated.
+  Its repo doesn't drive LIBERO, so a LIBERO bridge is still to write; fallback is upstream PyTorch fp16.
+- **Jetson ssh**: `ssh -o BatchMode=yes -o ConnectTimeout=5 jetson true` was blocked by this session's
+  permission layer (command denied, not a connection result), so I don't know whether it works. Nothing was done on
+  the Jetson; steps 1-3 below are still open.
+- **GPU busy**: robot-framing-test's server holds the gpu-run lock (non-preemptible, hours), so no GPU job ran.
+  The X-VLA NUC reference run is not done.
+- **X-VLA LIBERO wiring (NUC)**: `scripts/libero_eval.py --arch xvla --backend lerobot` now mirrors lerobot's own
+  eval pipeline: raw env obs, `preprocess_observation`, lerobot's X-VLA env pre-processor (20-d state from eef pose,
+  image flip, ImageNet norm, domain id), then the checkpoint processors and policy in the client, then rot6d to
+  axis-angle for the 7-d action. Checked on a real LIBERO env with a stub (CPU, via sim-run): state (1,20), images
+  (1,3,256,256), domain_id, 7-d action out. The policy itself has not been run through it yet.
+  Run it with `scripts/run_reference.sh xvla_fp16_ref xvla lerobot/xvla-libero 8e6aeef01f634f5d3b5be4340328f19cc2c25a65 <S>`
+  under `gpu-run --need-mib 4096 -- sim-run ...` once the GPU is free. Which checkpoint to use
+  (`lerobot/xvla-libero` vs `2toINF/X-VLA-Libero` in PLAN.md) is still open; I kept the lerobot one since it
+  is what the processors target.
 
 ## Decisions taken overnight
 - **Jetson unreachable**: `ssh jetson` fails with "Could not resolve hostname" from the NUC. There is no
@@ -73,16 +93,12 @@ Session stopped at the owner's request. No benchmark rows exist yet. The first s
    7B rows wait for the owner's go-ahead.
 
 ## Open decisions for the owner
-- Precision label for the vla.cpp rows: the GGUFs are "as shipped" (vla.cpp's own dtype choice,
-  `--weight-dtype` defaults to bf16 in its eval script). Is that fine as the "fp16 as-is" row, or
-  should we force fp16?
-- X-VLA runtime: upstream PyTorch fp16 on the Jetson (current plan) or eetmie's TensorRT export.
-  eetmie's repo is benchmark-only (no LIBERO driving) and was measured on JetPack 7.2.1.
+- Resolved 2026-11-06: precision label ("as shipped"), X-VLA runtime (eetmie TensorRT, MIT).
 - Optional: run `sudo jetson_clocks --show` once so the EMC clock goes on record. The scripts can't
   read it without sudo.
 
 ## Uncommitted
-Nothing is uncommitted in this repo. Weights, runtimes/ and venvs are git-ignored on purpose.
+Day-1106 work is committed on branch day-1106 (local, not pushed). Weights, runtimes/ and venvs are git-ignored on purpose.
 
 ## Note on the NUC
 At capture time the NUC was also running Quatern processes (user `quatern`, several python3 at

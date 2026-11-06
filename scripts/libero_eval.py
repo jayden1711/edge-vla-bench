@@ -60,8 +60,11 @@ class LeRobotTorchClient:
 
     def get_action(self, obs):
         torch = self.torch
-        batch = {k: torch.from_numpy(v)[None].to("cuda") for k, v in obs.items() if hasattr(v, "shape")}
-        batch["task"] = [obs.get("task", "")]
+        if obs.get("_batched_tensors"):
+            batch = {k: v.to("cuda") if torch.is_tensor(v) else v for k, v in obs.items() if k != "_batched_tensors"}
+        else:
+            batch = {k: torch.from_numpy(v)[None].to("cuda") for k, v in obs.items() if hasattr(v, "shape")}
+            batch["task"] = [obs.get("task", "")]
         batch = self.pre(batch)
         batch = {k: (v.to(self.dtype) if torch.is_tensor(v) and v.is_floating_point() else v)
                  for k, v in batch.items()}
@@ -74,6 +77,41 @@ class LeRobotTorchClient:
             self._action_queue.extend([None] * self.n_action_steps)
         self._action_queue.popleft()
         return act[0].cpu().numpy()
+
+
+def make_xvla_adapter(inner):
+    """X-VLA on LIBERO, mirroring lerobot's own eval pipeline: raw env obs -> preprocess_observation ->
+    env pre-processor (eef pose to 20-d rot6d state, image flip, ImageNet norm, domain id) -> checkpoint
+    processors + policy (in the client) -> env post-processor (rot6d to axis-angle, 7-d action)."""
+    import numpy as np
+    import torch
+    from client.adapters import BasePipelineAdapter
+    from lerobot.envs.utils import preprocess_observation
+    from lerobot.policies.xvla.processor_xvla import make_xvla_libero_pre_post_processors
+    env_pre, env_post = make_xvla_libero_pre_post_processors()
+
+    class XVLALiberoAdapter(BasePipelineAdapter):
+        def parse_observation(self, obs):
+            batched = {k: (_add_batch(v)) for k, v in obs.items()}
+            o = preprocess_observation(batched)
+            o["task"] = [obs.get("task_description", "")]
+            o = env_pre(o)
+            o = {k: v for k, v in o.items() if k not in ("action", "info") and not k.startswith("next.")}
+            o["_batched_tensors"] = True
+            return o
+
+        def parse_action(self, action):
+            t = env_post({"action": torch.as_tensor(action)[None] if action.ndim == 1 else torch.as_tensor(action)})
+            return t["action"].cpu().numpy()[0]
+
+    def _add_batch(x):
+        if isinstance(x, np.ndarray):
+            return x[None]
+        if isinstance(x, dict):
+            return {k: _add_batch(v) for k, v in x.items()}
+        return x
+
+    return XVLALiberoAdapter(client=inner)
 
 
 def main():
@@ -117,7 +155,11 @@ def main():
                   image_size=a.image_size, stats_json=a.stats_json)
         kw["vla_addr" if "vla_addr" in sig else "addr"] = a.vla_addr
         inner = VlaCppClient(**{k: v for k, v in kw.items() if k in sig})
-    adapter = Evo1PipelineAdapter(client=inner) if a.arch == "evo1" else LeRobotPipelineAdapter(client=inner)
+    if a.arch == "xvla":
+        assert a.backend == "lerobot", "X-VLA is only wired for the lerobot backend"
+        adapter = make_xvla_adapter(inner)
+    else:
+        adapter = Evo1PipelineAdapter(client=inner) if a.arch == "evo1" else LeRobotPipelineAdapter(client=inner)
 
     steps_f = open(out / "steps.jsonl", "w")
     episodes, n_req = [], 0

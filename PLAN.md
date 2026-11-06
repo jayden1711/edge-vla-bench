@@ -40,6 +40,11 @@ sim_location (`local` or `remote-nuc`).
 Current Jetson state (2026-11-06): L4T R36.4.7 (JetPack 6.2.1), MAXN_SUPER, CPU 1.728 GHz and
 GPU 1.02 GHz pinned (min = max, so jetson_clocks appears active), CUDA 12.6, TensorRT 10.3.0.30.
 
+## Precision labels (owner decision, 2026-11-06)
+
+vla.cpp rows use the GGUFs exactly as shipped and are labeled "as shipped", to match vla.cpp's
+Table III. We do not force fp16 or re-quantize them.
+
 ## Columns
 
 Model, params, precision/method, fits (yes / OOM / needs remote sim), peak RSS (MiB),
@@ -85,9 +90,9 @@ First stop point: calibration row + three as-is models. 7B rows do not start unt
 
 | # | Model | Row(s) | Checkpoint (HF id @ revision) | License | Status |
 |---|---|---|---|---|---|
-| 1 | SmolVLA (450M) | fp16 as-is (vla.cpp) | `vrfai/smolvla-libero-gguf` @ 349851cd (GGUF of `HuggingFaceVLA/smolvla_libero` @ 6721902b) | Apache-2.0 | calibration, in progress |
-| 2 | X-VLA (0.9B) | fp16 as-is | `2toINF/X-VLA-Libero` @ 129e7146; code github.com/2toinf/X-VLA @ 6c4ecfb8 | Apache-2.0 | todo; runtime TBD (not in vla.cpp) |
-| 3 | Evo-1 | fp16 as-is (vla.cpp) | `vrfai/evo1-libero-gguf` @ c76eb353 (GGUF of `MINT-SJTU/Evo1_LIBERO` @ 3ddc6c9c); code github.com/MINT-SJTU/Evo-1 @ 5fd14b01 | GGUF repo: Apache-2.0; upstream code: MIT; upstream HF weights: no license field, to confirm | todo |
+| 1 | SmolVLA (450M) | GGUF "as shipped" (vla.cpp) | `vrfai/smolvla-libero-gguf` @ 349851cd (GGUF of `HuggingFaceVLA/smolvla_libero` @ 6721902b) | Apache-2.0 | calibration, in progress |
+| 2 | X-VLA (0.9B) | TensorRT export by eetmie (github.com/eetmie/jetson-orin-nano-vla @ 6aa4a151, MIT); fallback: upstream PyTorch fp16 | `2toINF/X-VLA-Libero` @ 129e7146; code github.com/2toinf/X-VLA @ 6c4ecfb8 | Apache-2.0 | todo; NUC reference uses `lerobot/xvla-libero`, LIBERO processors wired in scripts/libero_eval.py |
+| 3 | Evo-1 | GGUF "as shipped" (vla.cpp) | `vrfai/evo1-libero-gguf` @ c76eb353 (GGUF of `MINT-SJTU/Evo1_LIBERO` @ 3ddc6c9c); code github.com/MINT-SJTU/Evo-1 @ 5fd14b01 | GGUF repo: Apache-2.0; upstream code: MIT; upstream HF weights: no license field, to confirm | todo |
 | 4 | pi0 | standard int8 / as published | TBD | TBD | later |
 | 5 | pi0.5 | standard int8 / as published | TBD | TBD | later |
 | 6 | BitVLA | as published (1.58-bit) | TBD | TBD | later |
@@ -117,5 +122,7 @@ baseline row always sits next to it so any gain is measurable.
    "private" rule). Pushes still wait for the owner's go-ahead.
 2. `sudo` on the Jetson needs a password, so EMC clock and the jetson_clocks state can only be
    inferred, not read. Fine for now; the owner may want to record `sudo jetson_clocks --show` once.
-3. X-VLA is not supported by vla.cpp; pick a runtime (upstream PyTorch fp16 or the
-   eetmie TensorRT export) and say which in its row.
+3. X-VLA is not supported by vla.cpp. Decision (owner, 2026-11-06): use eetmie's TensorRT export
+   (MIT license, checked), label the row "TensorRT export by eetmie". The repo only benchmarks, it
+   doesn't drive LIBERO, so it needs a LIBERO bridge; if that doesn't work, fall back to upstream
+   PyTorch fp16 and say so in the row.
