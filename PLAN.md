@@ -2,7 +2,7 @@
 
 Benchmark of robot VLA models on an 8 GB Jetson Orin Nano: what fits, how fast, how accurate.
 
-Rules: the repo stays private until the owner says otherwise. No model weights or converted
+Rules: the GitHub repo is public (owner confirmed 2026-11-06). No model weights or converted
 artifacts are committed or redistributed (`.gitignore` blocks them). Only scripts, configs and
 results go in the repo. Nothing gets posted publicly without the owner's go-ahead.
 
@@ -113,8 +113,8 @@ baseline row always sits next to it so any gain is measurable.
 
 ## Open issues
 
-1. **The GitHub repo `jayden1711/edge-vla-bench` is currently PUBLIC** (empty, created
-   2026-11-06). Nothing has been pushed. It must be made private before the first push.
+1. Repo visibility: public, confirmed by the owner on 2026-11-06 (this replaces the brief's
+   "private" rule). Pushes still wait for the owner's go-ahead.
 2. `sudo` on the Jetson needs a password, so EMC clock and the jetson_clocks state can only be
    inferred, not read. Fine for now; the owner may want to record `sudo jetson_clocks --show` once.
 3. X-VLA is not supported by vla.cpp; pick a runtime (upstream PyTorch fp16 or the

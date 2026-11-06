@@ -30,6 +30,52 @@ def parse_ids(s):
     return out
 
 
+class LeRobotTorchClient:
+    """Upstream lerobot policy behind the VlaCppClient interface the adapters use
+    (reset / get_action(parsed_obs) / _action_queue). The adapter's parse_observation
+    output (lerobot-format numpy, no batch dim, plus "task") feeds the checkpoint's own
+    pre/post-processors, so normalization and tokenization are upstream's."""
+
+    def __init__(self, repo_id, revision, n_action_steps, dtype):
+        from collections import deque
+        import torch
+        from huggingface_hub import snapshot_download
+        from lerobot.policies.factory import get_policy_class, make_pre_post_processors
+        from lerobot.configs.policies import PreTrainedConfig
+        self.torch = torch
+        path = snapshot_download(repo_id, revision=revision)
+        cfg = PreTrainedConfig.from_pretrained(path)
+        cfg.n_action_steps = n_action_steps
+        cfg.device = "cuda"
+        self.policy = get_policy_class(cfg.type).from_pretrained(path, config=cfg)
+        self.policy.to(device="cuda", dtype=getattr(torch, dtype)).eval()
+        self.dtype = getattr(torch, dtype)
+        self.pre, self.post = make_pre_post_processors(cfg, pretrained_path=path)
+        self.n_action_steps = n_action_steps
+        self._action_queue = deque(maxlen=n_action_steps)  # mirrors the policy's own queue
+
+    def reset(self):
+        self.policy.reset()
+        self._action_queue.clear()
+
+    def get_action(self, obs):
+        torch = self.torch
+        batch = {k: torch.from_numpy(v)[None].to("cuda") for k, v in obs.items() if hasattr(v, "shape")}
+        batch["task"] = [obs.get("task", "")]
+        batch = self.pre(batch)
+        batch = {k: (v.to(self.dtype) if torch.is_tensor(v) and v.is_floating_point() else v)
+                 for k, v in batch.items()}
+        # fp16 weights + autocast: SmolVLA builds some float32 tensors internally (noise, time emb)
+        with torch.inference_mode(), torch.autocast("cuda", dtype=self.dtype, enabled=self.dtype != torch.float32):
+            act = self.policy.select_action(batch)
+        act = self.post(act.float())
+        # keep a shadow queue only so the caller can tell request steps from queue pops
+        if not self._action_queue:
+            self._action_queue.extend([None] * self.n_action_steps)
+        self._action_queue.popleft()
+        return act[0].cpu().numpy()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--vla-root", required=True, help="vla.cpp checkout (for eval/client and eval/sim)")
@@ -46,6 +92,11 @@ def main():
     ap.add_argument("--warmup", type=int, default=3, help="requests excluded from latency stats")
     ap.add_argument("--videos", action="store_true")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--backend", choices=["vla.cpp", "lerobot"], default="vla.cpp",
+                    help="lerobot = upstream PyTorch policy in-process (fp16 reference on the NUC)")
+    ap.add_argument("--policy", help="[lerobot] HF repo id of the upstream checkpoint")
+    ap.add_argument("--revision", help="[lerobot] HF revision (commit sha)")
+    ap.add_argument("--dtype", default="float16", help="[lerobot] float16|bfloat16|float32")
     a = ap.parse_args()
 
     eval_dir = Path(a.vla_root).resolve() / "eval"
@@ -57,12 +108,15 @@ def main():
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    import inspect
-    sig = inspect.signature(VlaCppClient.__init__).parameters
-    kw = dict(arch=a.arch, n_action_steps=a.n_action_steps, tokenizer_name=a.tokenizer,
-              image_size=a.image_size, stats_json=a.stats_json)
-    kw["vla_addr" if "vla_addr" in sig else "addr"] = a.vla_addr
-    inner = VlaCppClient(**{k: v for k, v in kw.items() if k in sig})
+    if a.backend == "lerobot":
+        inner = LeRobotTorchClient(a.policy, a.revision, a.n_action_steps, a.dtype)
+    else:
+        import inspect
+        sig = inspect.signature(VlaCppClient.__init__).parameters
+        kw = dict(arch=a.arch, n_action_steps=a.n_action_steps, tokenizer_name=a.tokenizer,
+                  image_size=a.image_size, stats_json=a.stats_json)
+        kw["vla_addr" if "vla_addr" in sig else "addr"] = a.vla_addr
+        inner = VlaCppClient(**{k: v for k, v in kw.items() if k in sig})
     adapter = Evo1PipelineAdapter(client=inner) if a.arch == "evo1" else LeRobotPipelineAdapter(client=inner)
 
     steps_f = open(out / "steps.jsonl", "w")
