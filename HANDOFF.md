@@ -1,10 +1,34 @@
 # HANDOFF (2026-11-06)
-Status: Harness built; SmolVLA fp16 reference stopped partway; Jetson reference venv broken (libcudss)
-Next: Rsync to the Jetson, smoke test, then the SmolVLA calibration row
-Updated: 2026-11-06
+Status: Harness built; SmolVLA fp16 reference done on NUC (local); Jetson unreachable overnight; X-VLA needs LIBERO processor wiring
+Next: Fix `jetson` ssh access from the NUC, then rsync, smoke test, SmolVLA calibration row
+Updated: 2026-11-06 (overnight run)
 
 Session stopped at the owner's request. No benchmark rows exist yet. The first stop point
 (calibration row + SmolVLA, X-VLA, Evo-1 rows) is **not** reached.
+
+## Decisions taken overnight
+- **Jetson unreachable**: `ssh jetson` fails with "Could not resolve hostname" from the NUC. There is no
+  ~/.ssh/config on this machine and the Jetson isn't in `tailscale status`. Steps 1-3 (rsync, smoke,
+  calibration) and the Jetson venv fix were not attempted. Nothing was changed on the Jetson.
+- **SmolVLA fp16 reference rerun and completed** (full 10 tasks x 20 episodes) under
+  `results/nuc/smolvla_fp16_ref/20261106T080842Z/` (local, git-ignored; `row.json` made with summarize.py).
+  Ran as `gpu-run --need-mib 4096 -- sim-run scripts/run_reference.sh ...`, run locally on the NUC (no ssh).
+  The earlier PARTIAL dir is kept. Compare against the Jetson calibration row once that exists.
+- **Evo-1 reference skipped**: lerobot 0.4.3 has no Evo-1 policy (policies: groot, pi0, pi05, pi0_fast, wall_x,
+  xvla, smolvla). It needs the MINT-SJTU/Evo-1 code, its own deps and a new adapter, and its HF weights have
+  no license field. Conservative choice: not started.
+- **X-VLA smoke on the NUC attempted and not usable yet**: `lerobot/xvla-libero` is
+  8e6aeef01f634f5d3b5be4340328f19cc2c25a65 (apache-2.0; PLAN.md lists `2toINF/X-VLA-Libero` @ 129e7146, so
+  the checkpoint to use needs deciding). The model loads and runs, but outputs 20-dim actions and the env
+  expects 7 (`AssertionError ... expected 7, got 20`). lerobot ships `make_xvla_libero_pre_post_processors()`
+  (envs/factory.py) that does rot6d to axis-angle and builds the 20-d state from the raw eef pose. Our
+  LeRobotTorchClient uses the checkpoint's own processors on the vla.cpp adapter's observations, which lack
+  that. Fix: feed raw LIBERO obs through lerobot's env processors. I didn't guess a conversion, because a
+  wrong one would give misleading accuracy. Smoke dir: `results/nuc/xvla_smoke/` (failed, local).
+- **Verified**: vla-server prints "vla-server: bound to ... ready." with stdout unbuffered/line-buffered
+  (src/serving/server.cpp:323), so `run_row.sh`'s ready grep works. `tegrastats` without sudo is still
+  unchecked (Jetson).
+- The gpu-run lock was briefly held by walk-anything (preemptible); it yielded as designed.
 
 ## Done
 - Repo skeleton, PLAN.md (prior art, protocol, columns, model and tool licenses and commits), README.
@@ -22,9 +46,8 @@ Session stopped at the owner's request. No benchmark rows exist yet. The first s
   lerobot 0.4.3) works on the RTX 5080. A smoke test of the SmolVLA fp16 reference ran (result in results/, local).
 
 ## In progress / stopped
-- **SmolVLA fp16 reference on the NUC: stopped partway** (tasks 0-3, task 3 partial). Saved locally (git-ignored) under `results/nuc/smolvla_fp16_ref/20261106T062710Z/`
-  (marked `PARTIAL`). There is no episode-level resume, so rerun the whole thing (about 75 min):
-  `ssh nuc-admin 'cd ~/edge-vla-bench && scripts/run_reference.sh smolvla_fp16_ref smolvla HuggingFaceVLA/smolvla_libero 6721902bc4d61e50a3bfdb11dfb4cb626f05d102 4'`
+- SmolVLA fp16 reference on the NUC: done (see Decisions taken overnight). The 20261106T062710Z dir is the
+  old PARTIAL run.
 - **Jetson PyTorch venv (`runtimes/ref_uv`, for X-VLA): failed.** The JP6 torch 2.11.0 wheel from
   the Jetson AI Lab index needs `libcudss.so.0`, which isn't installed. Fix: install cuDSS
   (needs sudo), or pin an older wheel (torch 2.8.0 / torchvision 0.23 from the same index).
@@ -41,7 +64,7 @@ Session stopped at the owner's request. No benchmark rows exist yet. The first s
    Compare with vla.cpp Table III: 141.81 ms/action, 176/200, 2031 MiB. If latency differs by more
    than ~15% or successes by more than ~10, investigate before going on. Known differences: JetPack
    6.2.1 vs their 6.2.2, our clocks are pinned, and the Table III commit is unknown.
-4. Finish the SmolVLA fp16 reference (command above). Then Evo-1 (vla.cpp, S=8 per Table III) and its
+4. (SmolVLA fp16 reference done.) Evo-1 (vla.cpp, S=8 per Table III) and its
    reference (`MINT-SJTU/Evo1_LIBERO` @ 3ddc6c9c; the lerobot backend may not support Evo-1, check).
 5. X-VLA: fix the Jetson torch venv, then `libero_eval.py --backend lerobot --policy lerobot/xvla-libero
    --revision 8e6aeef0...`. Check that the vla.cpp LIBERO adapter's observation and action format
