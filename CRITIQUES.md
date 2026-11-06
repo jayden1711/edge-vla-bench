@@ -7,10 +7,6 @@ This file contains no result numbers. Numbers live in git-ignored `results/` and
 
 All accuracy numbers in this project are **LIBERO-Object simulation** results. None are real-robot results.
 
-## Disclosure (repeated next to every Jetson result)
-
-The author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. The Jetson Orin Nano, JetPack, CUDA and
-TensorRT are NVIDIA products. `scripts/summarize.py table` prints this disclosure under every table.
 ## Prior-work and framing
 
 **1. "vla.cpp already did this."** [A]
@@ -63,7 +59,7 @@ vla.cpp's docs say theirs were not changed. [C] Not recorded: the EMC (memory) c
 summarized; `tegrastats.log` in each run dir has the temperatures and can be inspected.
 
 **6. "NVIDIA bias."** [A] + [C]
-Disclosure above. Mitigations in the design: published third-party numbers are quoted only as calibration targets;
+Mitigations in the design: published third-party numbers are quoted only as calibration targets;
 we publish rows that look bad for the hardware too (all rows go in `results/ATTEMPTS.md`, none dropped); the
 reference machine is an NVIDIA GPU as well, so the NUC does **not** serve as an NVIDIA-independent check. [C] No
 non-NVIDIA edge hardware is tested; we make no claims about other boards.
@@ -249,12 +245,9 @@ figure, which suggests Table III used non-default flags [verify]; this is a hypo
 command and the three dtype lines from `server.log` in `setup.json` for new rows (not done), and run the
 flag-set row as a separate labeled row if the Jetson is available. Limitation stated: rows are not a ranking.
 
-**R4. "NVIDIA bias; hardware advantages."** [C] Owner-required; extends item 6. Disclosure is in README, PLAN,
-the table footer and this file. Added points: clocks are pinned at the mode's maximum while the vla.cpp doc
+**R4. "NVIDIA bias; hardware advantages."** [C] Owner-required; extends item 6. Added points: clocks are pinned at the mode's maximum while the vla.cpp doc
 we calibrate against did not change them, which favors the hardware; the NUC reference is NVIDIA too; the CUDA
-GGUF runtime is the vendor-friendly path, and no non-NVIDIA edge board is tested. The disclosure tense must be fixed
-at posting: "was an NVIDIA intern until Nov 13, 2026" is only true after Nov 13; before it, write "is an NVIDIA
-intern (until Nov 13, 2026)". Whether the Jetson was NVIDIA-provided or personally owned is not recorded [verify]; state it.
+GGUF runtime is the vendor-friendly path, and no non-NVIDIA edge board is tested. Whether the Jetson was NVIDIA-provided or personally owned is not recorded [verify]; state it.
 
 **R5. Omitted references (owner asked for a judgement).** Mostly right, with one correction. I cannot open any of
 them offline and I do not state what the MIT post, PicoGPT, Hirundo / CrowdStrike / Booz Allen items contain
@@ -301,6 +294,5 @@ JetPack 6.2.2; ours is the v0.4.0 tag, JetPack 6.2.1. Not reconciled; listed so 
 - No cherry-picking: all five run dirs are listed in `ATTEMPTS.md`; the only complete rows use the complete runs.
 - Simulation stated plainly: README top, PLAN, table footer, this file. OK.
 - Prior work: vla.cpp, eetmie, 2604.24447 cited; vla.cpp id confirmed offline, the others marked [verify]. OK.
-- Disclosure: present in README, PLAN, table footer, CRITIQUES; tense issue (R4). Not in HANDOFF (internal; fine).
 - Neutral wording: no superlatives found in README/PLAN/CRITIQUES. "Pi0 / BitVLA later" etc. are plans.
 - No numbers in tracked files: checked README, PLAN, CRITIQUES, HANDOFF (only third-party Table III targets, allowed).

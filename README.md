@@ -9,9 +9,6 @@ This repo holds scripts, configs and docs. It contains no model weights.
 
 **All accuracy results are LIBERO simulation results, not real-robot results.**
 
-**Disclosure:** the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. The Jetson
-device, JetPack, CUDA and TensorRT are NVIDIA products, and the NUC reference machine has an NVIDIA GPU.
-
 ## Prior work
 
 - vla.cpp, arXiv 2606.08094, github.com/VinRobotics/vla.cpp (Apache-2.0): the runtime, eval loop and table

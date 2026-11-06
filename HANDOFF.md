@@ -16,7 +16,7 @@ The Jetson steps listed under older decisions below were done by the organizer (
   RoboStriker, URMA/MetaMorph, Text2Robot) judged not relevant to this repo and not cited (flagged in CRITIQUES.md item 2
   for the owner); unverifiable arXiv ids marked [verify]; the "$249" price claim in PLAN.md replaced by a [verify] note.
 - **Harness changes**: `run_row.sh` now stores the full model sha256 and writes `setup_end.json`; `summarize.py` rows carry
-  runtime, format, power mode, clocks, seed, date and the table prints the disclosure; new `attempts` subcommand.
+  runtime, format, power mode, clocks, seed, date; new `attempts` subcommand.
   Existing Jetson row keeps the 16-hex sha prefix and has no `setup_end.json`.
 - **Mistake noted**: one no-op inline python heredoc was run by accident (prints a string, no effect).
 - Not done: seed repeats, GGUF-vs-PyTorch action comparison, remote-sim latency comparison (need GPU/Jetson; listed as [B] in CRITIQUES.md).
@@ -146,4 +146,4 @@ Jetson latency goes in the table.
 Findings are in CRITIQUES.md "Reviewer pass". Code: `summarize.py table` skips `_*` dirs (it had duplicated the Jetson
 row from a scratch copy), blanks NUC latency, adds model_ref/model_sha256 columns. Not run (GPU lock held, load above 16):
 repeats, flag-set row, GGUF-vs-PyTorch action check. Two no-op inline python heredocs were run by mistake (no effect).
-To do: record full server command and dtype lines from server.log in setup.json; fix disclosure tense at posting.
+To do: record full server command and dtype lines from server.log in setup.json.

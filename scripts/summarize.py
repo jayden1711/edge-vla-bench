@@ -87,8 +87,7 @@ COLS = ["model", "params", "runtime", "format", "role", "power_mode", "cpu_mhz_c
         "model_ref", "model_sha256", "run_dir"]
 LATENCY_COLS = ("p50_ms_per_request", "p95_ms_per_request", "ms_per_executed_action", "hz")
 
-DISCLOSURE = ("Disclosure: the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. "
-              "The Jetson rows run on NVIDIA hardware and software. All accuracy numbers are LIBERO-Object "
+FOOTER = ("The Jetson rows run on NVIDIA hardware and software. All accuracy numbers are LIBERO-Object "
               "SIMULATION results, not real-robot results. Runtime and format are listed as used, "
               "not tuned per model; see CRITIQUES.md.")
 
@@ -103,7 +102,7 @@ def table(a):
         # NUC is shared with other workloads, so only Jetson latency is reported
         blank = LATENCY_COLS if r.get("role") != "jetson" else ()
         print("| " + " | ".join("" if (r.get(c) is None or c in blank) else str(r.get(c)) for c in COLS) + " |")
-    print("\n" + DISCLOSURE)
+    print("\n" + FOOTER)
     print("Rows with empty runtime/power_mode were summarized before provenance fields existed; "
           "rerun `summarize.py row` on their run dir.")
 

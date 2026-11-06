@@ -2,7 +2,7 @@
 
 Benchmark of robot VLA models on an 8 GB Jetson Orin Nano: what fits, how fast, how accurate.
 
-Disclosure (carry it next to every Jetson result): the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. All accuracy numbers are LIBERO simulation, not real-robot. See CRITIQUES.md.
+All accuracy numbers are LIBERO simulation, not real-robot. See CRITIQUES.md.
 
 Rules: the GitHub repo is public (owner confirmed 2026-11-06). No model weights or converted
 artifacts are committed or redistributed (`.gitignore` blocks them). Only scripts, configs and docs go in the repo;
