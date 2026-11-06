@@ -21,6 +21,8 @@ Run inside vla.cpp's LIBERO venv:
 import argparse, json, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 
 def parse_ids(s):
     out = []
@@ -130,10 +132,13 @@ def main():
     ap.add_argument("--warmup", type=int, default=3, help="requests excluded from latency stats")
     ap.add_argument("--videos", action="store_true")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--backend", choices=["vla.cpp", "lerobot"], default="vla.cpp",
+    ap.add_argument("--backend", choices=["vla.cpp", "lerobot", "xvla-trt"], default="vla.cpp",
                     help="lerobot = upstream PyTorch policy in-process (fp16 reference on the NUC)")
     ap.add_argument("--policy", help="[lerobot] HF repo id of the upstream checkpoint")
     ap.add_argument("--revision", help="[lerobot] HF revision (commit sha)")
+    ap.add_argument("--eetmie-root", help="[xvla-trt] checkout of eetmie/jetson-orin-nano-vla")
+    ap.add_argument("--bundle", help="[xvla-trt] exported X-VLA bundle dir (from lerobot/xvla-libero)")
+    ap.add_argument("--trt-cache", default="~/.cache/edge-vla-bench/trt", help="[xvla-trt] engine cache dir")
     ap.add_argument("--dtype", default="float16", help="[lerobot] float16|bfloat16|float32")
     a = ap.parse_args()
 
@@ -148,6 +153,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     if a.backend == "lerobot":
         inner = LeRobotTorchClient(a.policy, a.revision, a.n_action_steps, a.dtype)
+    elif a.backend == "xvla-trt":
+        from xvla_trt_client import XvlaTrtClient
+        inner = XvlaTrtClient(a.eetmie_root, a.bundle, a.trt_cache, a.policy, a.revision,
+                              a.n_action_steps, seed=a.seed)
     else:
         import inspect
         sig = inspect.signature(VlaCppClient.__init__).parameters
@@ -156,7 +165,7 @@ def main():
         kw["vla_addr" if "vla_addr" in sig else "addr"] = a.vla_addr
         inner = VlaCppClient(**{k: v for k, v in kw.items() if k in sig})
     if a.arch == "xvla":
-        assert a.backend == "lerobot", "X-VLA is only wired for the lerobot backend"
+        assert a.backend in ("lerobot", "xvla-trt"), "X-VLA is only wired for the lerobot and xvla-trt backends"
         adapter = make_xvla_adapter(inner)
     else:
         adapter = Evo1PipelineAdapter(client=inner) if a.arch == "evo1" else LeRobotPipelineAdapter(client=inner)

@@ -1,10 +1,34 @@
 # HANDOFF (2026-11-06)
-Status: Harness built; SmolVLA fp16 reference done on NUC (local); X-VLA LIBERO wiring done and shape-checked on NUC; Jetson still unreachable from my session
-Next: When NUC->Jetson ssh works: HANDOFF steps 1-3 (rsync, smoke, SmolVLA calibration row). Then X-VLA NUC reference run once the GPU is free
+Status: Harness built; SmolVLA fp16 reference done on NUC (local); X-VLA LIBERO wiring + eetmie TensorRT bridge written (untested); Jetson steps not run (ssh denied by permission layer)
+Next: Run the Jetson commands below (rsync, smoke, SmolVLA calibration); export the xvla-libero bundle; X-VLA NUC reference run once the GPU lock is free
 Updated: 2026-11-06 (daytime run, branch day-1106, not pushed)
 
 Session stopped at the owner's request. No benchmark rows exist yet. The first stop point
 (calibration row + SmolVLA, X-VLA, Evo-1 rows) is **not** reached.
+
+## Decisions taken (day-1106, resumed session)
+- **X-VLA checkpoint**: `lerobot/xvla-libero` @ 8e6aeef01f634f5d3b5be4340328f19cc2c25a65 (owner decision);
+  PLAN.md and THIRD_PARTY.md updated (reason: the LIBERO processors target it; Apache-2.0).
+- **Jetson ssh denied again**: the permission layer refused `ssh jetson ...`. Per the organizer's note I did not
+  work around it; nothing was run on the Jetson. Run these from the NUC (repo root = this worktree or main after merge):
+  1. `rsync -a --exclude .git --exclude runtimes/ --exclude weights/ --exclude results/ ./ jetson:edge-vla-bench/`
+  2. smoke: `ssh jetson 'cd ~/edge-vla-bench && TASK_IDS=0 N_EPISODES=2 scripts/run_row.sh smoke ~/edge-vla-bench/weights/smolvla-libero-gguf/smolvla-libero.gguf smolvla 4 --run precision=as-shipped --run chunk=50 --run cameras=2 --run resolution=512'`
+  3. calibration: same with `ROW=smolvla_calib` (10 tasks x 20 episodes), then copy the run dir back into
+     `results/jetson/` and compare with vla.cpp Table III as in step 3 below.
+  Anything needing sudo on the Jetson (cuDSS for the torch wheel, `jetson_clocks --show`) is still listed under
+  "In progress" and "Open decisions"; do not run it unattended.
+- **GPU/sim cap**: gpu-run lock held by the Qwen server (llama-server, ~10 GiB) and 4 sim-run processes were
+  already running, so no GPU or sim job was started (no X-VLA reference run, no stub test of the bridge).
+- **eetmie LIBERO bridge written, untested**: `scripts/xvla_trt_client.py` + `--backend xvla-trt` in
+  `scripts/libero_eval.py` (`--eetmie-root --bundle --trt-cache --policy --revision`). The client reuses
+  lerobot's checkpoint pre/post-processors on CPU and replaces only model execution with eetmie's
+  `bench.vendor.xvla_trt.infer` (noise x1 drawn from a seeded generator, gripper sigmoid inside `infer`).
+  Runtime cloned to `runtimes/eetmie-jetson-vla` at 6aa4a151 (ignored). Known open points to verify first:
+  (a) the bundle must be exported from `lerobot/xvla-libero` on the NUC (`./export.sh lerobot/xvla-libero`, 2 views),
+  (b) that eetmie's `infer` output is in the same space the checkpoint post-processor expects (compare the first
+  chunk with the PyTorch reference), (c) one interpreter needs tensorrt + lerobot + LIBERO together, which the
+  Jetson envs don't provide yet. Fallback stays upstream PyTorch fp16.
+- **Evo-1 reference**: still skipped (see overnight decisions).
 
 ## Decisions taken (day-1106, daytime run)
 - **Owner decisions recorded**: vla.cpp rows are "as shipped" (PLAN.md "Precision labels"). X-VLA uses
@@ -22,9 +46,7 @@ Session stopped at the owner's request. No benchmark rows exist yet. The first s
   axis-angle for the 7-d action. Checked on a real LIBERO env with a stub (CPU, via sim-run): state (1,20), images
   (1,3,256,256), domain_id, 7-d action out. The policy itself has not been run through it yet.
   Run it with `scripts/run_reference.sh xvla_fp16_ref xvla lerobot/xvla-libero 8e6aeef01f634f5d3b5be4340328f19cc2c25a65 <S>`
-  under `gpu-run --need-mib 4096 -- sim-run ...` once the GPU is free. Which checkpoint to use
-  (`lerobot/xvla-libero` vs `2toINF/X-VLA-Libero` in PLAN.md) is still open; I kept the lerobot one since it
-  is what the processors target.
+  under `gpu-run --need-mib 4096 -- sim-run ...` once the GPU is free. The checkpoint question is settled (lerobot/xvla-libero, owner decision).
 
 ## Decisions taken overnight
 - **Jetson unreachable**: `ssh jetson` fails with "Could not resolve hostname" from the NUC. There is no
