@@ -1,7 +1,7 @@
 # HANDOFF (2026-11-06)
-Status: SmolVLA Jetson calibration row and NUC fp16 reference both done (local results); CRITIQUES.md, analysis/attempts/prompts scripts and Makefile added; X-VLA bridge still untested (GPU lock busy)
-Next: organizer reviews branch day-1106 and pushes; X-VLA bridge test when the GPU lock frees; then X-VLA and Evo-1 rows, seed repeats; owner confirms the [verify] items
-Updated: 2026-11-06 (daytime run 2, branch day-1106, not pushed)
+Status: SmolVLA Jetson calibration row and NUC fp16 reference done (local results); CRITIQUES.md has a reviewer pass; X-VLA bridge still untested (GPU lock busy, load high)
+Next: owner reads CRITIQUES.md "Reviewer pass" (R1-R12), organizer pushes; then X-VLA bridge test, flag-set row and repeats when GPU/Jetson free; owner confirms the [verify] items
+Updated: 2026-11-06 (reviewer pass, branch day-1106, not pushed)
 
 First stop point (calibration row + SmolVLA, X-VLA, Evo-1 rows): calibration and SmolVLA done; X-VLA and Evo-1 not yet.
 The Jetson steps listed under older decisions below were done by the organizer (rows are in results/jetson/).
@@ -141,3 +141,9 @@ Day-1106 work is committed on branch day-1106 (local, not pushed). Weights, runt
 At capture time the NUC was also running Quatern processes (user `quatern`, several python3 at
 high CPU). That doesn't change reference accuracy, but NUC latency numbers aren't clean. Only
 Jetson latency goes in the table.
+
+## Reviewer pass (2026-11-06)
+Findings are in CRITIQUES.md "Reviewer pass". Code: `summarize.py table` skips `_*` dirs (it had duplicated the Jetson
+row from a scratch copy), blanks NUC latency, adds model_ref/model_sha256 columns. Not run (GPU lock held, load above 16):
+repeats, flag-set row, GGUF-vs-PyTorch action check. Two no-op inline python heredocs were run by mistake (no effect).
+To do: record full server command and dtype lines from server.log in setup.json; fix disclosure tense at posting.

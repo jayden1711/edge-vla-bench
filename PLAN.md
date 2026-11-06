@@ -128,3 +128,8 @@ baseline row always sits next to it so any gain is measurable.
    (MIT license, checked), label the row "TensorRT export by eetmie". The repo only benchmarks, it
    doesn't drive LIBERO, so it needs a LIBERO bridge; if that doesn't work, fall back to upstream
    PyTorch fp16 and say so in the row.
+
+## Before any 7B / compression row or post
+Cite or explicitly dismiss the owner's compression-related reading list (MIT weight-space post, PicoGPT, Hirundo /
+CrowdStrike / Booz Allen; contents not verified offline [verify]). Label the owner's own OmniVLA workshop paper as a
+self-citation. See CRITIQUES.md "Reviewer pass" R5.

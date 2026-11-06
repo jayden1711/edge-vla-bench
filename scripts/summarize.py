@@ -84,7 +84,8 @@ def row(a):
 COLS = ["model", "params", "runtime", "format", "role", "power_mode", "cpu_mhz_cur", "gpu_mhz_cur", "emc_rate_hz",
         "fits", "peak_rss_mib", "p50_ms_per_request", "p95_ms_per_request",
         "ms_per_executed_action", "hz", "success_rate", "success_delta_pp", "sim_location", "seed", "captured_utc",
-        "run_dir"]
+        "model_ref", "model_sha256", "run_dir"]
+LATENCY_COLS = ("p50_ms_per_request", "p95_ms_per_request", "ms_per_executed_action", "hz")
 
 DISCLOSURE = ("Disclosure: the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. "
               "The Jetson rows run on NVIDIA hardware and software. All accuracy numbers are LIBERO-Object "
@@ -93,10 +94,15 @@ DISCLOSURE = ("Disclosure: the author was an NVIDIA intern until Nov 13, 2026 an
 
 
 def table(a):
-    rows = [json.load(open(p)) for p in sorted(glob.glob(f"{a.root}/**/row.json", recursive=True))]
+    # scratch/trash dirs (leading "_") hold copies; reading them duplicated rows
+    paths = [p for p in sorted(glob.glob(f"{a.root}/**/row.json", recursive=True))
+             if not any(part.startswith("_") for part in Path(p).relative_to(a.root).parts)]
+    rows = [json.load(open(p)) for p in paths]
     print("| " + " | ".join(COLS) + " |\n|" + "---|" * len(COLS))
     for r in rows:
-        print("| " + " | ".join("" if r.get(c) is None else str(r.get(c)) for c in COLS) + " |")
+        # NUC is shared with other workloads, so only Jetson latency is reported
+        blank = LATENCY_COLS if r.get("role") != "jetson" else ()
+        print("| " + " | ".join("" if (r.get(c) is None or c in blank) else str(r.get(c)) for c in COLS) + " |")
     print("\n" + DISCLOSURE)
     print("Rows with empty runtime/power_mode were summarized before provenance fields existed; "
           "rerun `summarize.py row` on their run dir.")
