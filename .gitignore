@@ -24,3 +24,5 @@ videos/
 # Results, logs and write-ups stay local until the owner approves publishing
 results/
 .claude/worktrees/
+results
+.venv

@@ -91,7 +91,7 @@ First stop point: calibration row + three as-is models. 7B rows do not start unt
 | # | Model | Row(s) | Checkpoint (HF id @ revision) | License | Status |
 |---|---|---|---|---|---|
 | 1 | SmolVLA (450M) | GGUF "as shipped" (vla.cpp) | `vrfai/smolvla-libero-gguf` @ 349851cd (GGUF of `HuggingFaceVLA/smolvla_libero` @ 6721902b) | Apache-2.0 | calibration, in progress |
-| 2 | X-VLA (0.9B) | TensorRT export by eetmie (github.com/eetmie/jetson-orin-nano-vla @ 6aa4a151, MIT); fallback: upstream PyTorch fp16 | `2toINF/X-VLA-Libero` @ 129e7146; code github.com/2toinf/X-VLA @ 6c4ecfb8 | Apache-2.0 | todo; NUC reference uses `lerobot/xvla-libero`, LIBERO processors wired in scripts/libero_eval.py |
+| 2 | X-VLA (0.9B) | TensorRT export by eetmie (github.com/eetmie/jetson-orin-nano-vla @ 6aa4a151, MIT); fallback: upstream PyTorch fp16 | `lerobot/xvla-libero` @ 8e6aeef0 (owner decision 2026-11-06: lerobot's LIBERO processors target this checkpoint and it is Apache-2.0; replaces `2toINF/X-VLA-Libero`); code github.com/2toinf/X-VLA @ 6c4ecfb8 | Apache-2.0 | todo; NUC reference uses `lerobot/xvla-libero`, LIBERO processors wired in scripts/libero_eval.py |
 | 3 | Evo-1 | GGUF "as shipped" (vla.cpp) | `vrfai/evo1-libero-gguf` @ c76eb353 (GGUF of `MINT-SJTU/Evo1_LIBERO` @ 3ddc6c9c); code github.com/MINT-SJTU/Evo-1 @ 5fd14b01 | GGUF repo: Apache-2.0; upstream code: MIT; upstream HF weights: no license field, to confirm | todo |
 | 4 | pi0 | standard int8 / as published | TBD | TBD | later |
 | 5 | pi0.5 | standard int8 / as published | TBD | TBD | later |
