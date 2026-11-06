@@ -1,0 +1,22 @@
+# Never commit model weights or converted artifacts (see PLAN.md: no redistribution)
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.engine
+*.plan
+*.trt
+weights/
+models/
+checkpoints/
+hf_cache/
+# third-party runtime checkouts are cloned at pinned commits by scripts, not vendored
+runtimes/*/
+!runtimes/README.md
+# local scratch
+*.log
+__pycache__/
+.venv/
+videos/
