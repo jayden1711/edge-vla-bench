@@ -27,6 +27,24 @@ def tegra_peak_ram(path):
     return peak
 
 
+def provenance(setup, ev):
+    """Fields every row must carry: runtime/format as used, power mode, clocks, seed, date."""
+    p, run = setup.get("platform", {}), setup.get("run", {})
+    cpu = [int(c["cur_freq"]) for c in p.get("cpu_freq", {}).values() if c.get("cur_freq")]
+    gpu = (p.get("devfreq", {}).get("17000000.gpu") or {})
+    mhz = lambda v: round(int(v) / 1e6) if v else None
+    return {
+        "runtime": run.get("runtime"), "runtime_version": run.get("runtime_version"),
+        "format": run.get("precision") or run.get("model_file"),
+        "model_ref": run.get("policy") or run.get("model_file"), "model_sha256": run.get("model_sha256"),
+        "seed": ev.get("seed"), "role": setup.get("role"), "captured_utc": setup.get("captured_utc"),
+        "jetpack": p.get("jetpack"), "power_mode": p.get("power_mode"),
+        "cpu_mhz_cur": round(statistics.mean(cpu) / 1000) if cpu else None,
+        "gpu_mhz_cur": mhz(gpu.get("cur_freq")), "gpu_mhz_min": mhz(gpu.get("min_freq")),
+        "gpu_mhz_max": mhz(gpu.get("max_freq")), "emc_rate_hz": p.get("emc_rate_hz"),
+    }
+
+
 def row(a):
     d = Path(a.run_dir)
     steps = [json.loads(l) for l in open(d / "client" / "steps.jsonl")]
@@ -58,12 +76,20 @@ def row(a):
                              if a.reference_successes is not None else None),
         "run_dir": str(d), "setup": setup,
     }
+    r.update(provenance(setup, ev))
     (d / "row.json").write_text(json.dumps(r, indent=2))
     print(json.dumps({k: v for k, v in r.items() if k != "setup"}, indent=2))
 
 
-COLS = ["model", "params", "precision", "fits", "peak_rss_mib", "p50_ms_per_request", "p95_ms_per_request",
-        "ms_per_executed_action", "hz", "success_rate", "success_delta_pp", "sim_location"]
+COLS = ["model", "params", "runtime", "format", "role", "power_mode", "cpu_mhz_cur", "gpu_mhz_cur", "emc_rate_hz",
+        "fits", "peak_rss_mib", "p50_ms_per_request", "p95_ms_per_request",
+        "ms_per_executed_action", "hz", "success_rate", "success_delta_pp", "sim_location", "seed", "captured_utc",
+        "run_dir"]
+
+DISCLOSURE = ("Disclosure: the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. "
+              "The Jetson rows run on NVIDIA hardware and software. All accuracy numbers are LIBERO-Object "
+              "SIMULATION results, not real-robot results. Runtime and format are listed as used, "
+              "not tuned per model; see CRITIQUES.md.")
 
 
 def table(a):
@@ -71,6 +97,20 @@ def table(a):
     print("| " + " | ".join(COLS) + " |\n|" + "---|" * len(COLS))
     for r in rows:
         print("| " + " | ".join("" if r.get(c) is None else str(r.get(c)) for c in COLS) + " |")
+    print("\n" + DISCLOSURE)
+    print("Rows with empty runtime/power_mode were summarized before provenance fields existed; "
+          "rerun `summarize.py row` on their run dir.")
+
+
+def attempts(a):
+    """List every run dir under root (complete, partial, failed): nothing is left out of the record."""
+    print("| run_dir | has_setup | has_eval_summary | episodes | successes | has_row |\n|---|---|---|---|---|---|")
+    for s in sorted(glob.glob(f"{a.root}/*/*/*/setup.json")):
+        d = Path(s).parent
+        ev = d / "client" / "eval_summary.json"
+        e = json.load(open(ev)) if ev.exists() else {}
+        print(f"| {d} | yes | {'yes' if e else 'no'} | {e.get('episodes', '')} | {e.get('successes', '')} | "
+              f"{'yes' if (d / 'row.json').exists() else 'no'} |")
 
 
 if __name__ == "__main__":
@@ -80,5 +120,6 @@ if __name__ == "__main__":
     p.add_argument("--params", required=True); p.add_argument("--precision", required=True)
     p.add_argument("--fits", default="yes"); p.add_argument("--reference-successes", type=int)
     t = sub.add_parser("table"); t.add_argument("root")
+    t2 = sub.add_parser("attempts"); t2.add_argument("root")
     a = ap.parse_args()
-    row(a) if a.cmd == "row" else table(a)
+    {"row": row, "table": table, "attempts": attempts}[a.cmd](a)

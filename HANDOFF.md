@@ -1,10 +1,25 @@
 # HANDOFF (2026-11-06)
-Status: Harness built; SmolVLA fp16 reference done on NUC (local); X-VLA LIBERO wiring + eetmie TensorRT bridge written (untested); Jetson steps not run (ssh denied by permission layer)
-Next: Run the Jetson commands below (rsync, smoke, SmolVLA calibration); export the xvla-libero bundle; X-VLA NUC reference run once the GPU lock is free
-Updated: 2026-11-06 (daytime run, branch day-1106, not pushed)
+Status: SmolVLA Jetson calibration row and NUC fp16 reference both done (local results); CRITIQUES.md, analysis/attempts/prompts scripts and Makefile added; X-VLA bridge still untested (GPU lock busy)
+Next: organizer reviews branch day-1106 and pushes; X-VLA bridge test when the GPU lock frees; then X-VLA and Evo-1 rows, seed repeats; owner confirms the [verify] items
+Updated: 2026-11-06 (daytime run 2, branch day-1106, not pushed)
 
-Session stopped at the owner's request. No benchmark rows exist yet. The first stop point
-(calibration row + SmolVLA, X-VLA, Evo-1 rows) is **not** reached.
+First stop point (calibration row + SmolVLA, X-VLA, Evo-1 rows): calibration and SmolVLA done; X-VLA and Evo-1 not yet.
+The Jetson steps listed under older decisions below were done by the organizer (rows are in results/jetson/).
+
+## Decisions taken (day-1106, criticism-proofing run)
+- **Branch**: the earlier session left empty worktrees `critiques` and `day-1106` under `.claude/worktrees/` (no commits).
+  Used the existing `day-1106` one; both branches are at main's commit. `critiques` is unused.
+- **CRITIQUES.md** written (20 items, no result numbers). Calibration row copied by the organizer is analyzed in
+  `results/analysis/smolvla_calib_vs_fp16ref.json` (local). `make all` regenerates rows, TABLE.md, ATTEMPTS.md, analysis.
+- **X-VLA bridge test not run**: gpu-run lock held by robot-framing-test (Qwen server) all session. Blocked, nothing started.
+- **Conservative choices**: other prior work from the owner's list (MIT post, PicoGPT, Hirundo/CrowdStrike/Booz Allen,
+  RoboStriker, URMA/MetaMorph, Text2Robot) judged not relevant to this repo and not cited (flagged in CRITIQUES.md item 2
+  for the owner); unverifiable arXiv ids marked [verify]; the "$249" price claim in PLAN.md replaced by a [verify] note.
+- **Harness changes**: `run_row.sh` now stores the full model sha256 and writes `setup_end.json`; `summarize.py` rows carry
+  runtime, format, power mode, clocks, seed, date and the table prints the disclosure; new `attempts` subcommand.
+  Existing Jetson row keeps the 16-hex sha prefix and has no `setup_end.json`.
+- **Mistake noted**: one no-op inline python heredoc was run by accident (prints a string, no effect).
+- Not done: seed repeats, GGUF-vs-PyTorch action comparison, remote-sim latency comparison (need GPU/Jetson; listed as [B] in CRITIQUES.md).
 
 ## Decisions taken (day-1106, resumed session)
 - **X-VLA checkpoint**: `lerobot/xvla-libero` @ 8e6aeef01f634f5d3b5be4340328f19cc2c25a65 (owner decision);

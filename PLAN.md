@@ -2,9 +2,11 @@
 
 Benchmark of robot VLA models on an 8 GB Jetson Orin Nano: what fits, how fast, how accurate.
 
+Disclosure (carry it next to every Jetson result): the author was an NVIDIA intern until Nov 13, 2026 and founded Quatern. All accuracy numbers are LIBERO simulation, not real-robot. See CRITIQUES.md.
+
 Rules: the GitHub repo is public (owner confirmed 2026-11-06). No model weights or converted
-artifacts are committed or redistributed (`.gitignore` blocks them). Only scripts, configs and
-results go in the repo. Nothing gets posted publicly without the owner's go-ahead.
+artifacts are committed or redistributed (`.gitignore` blocks them). Only scripts, configs and docs go in the repo;
+results stay in git-ignored `results/` until the owner approves. Nothing gets posted publicly without the owner's go-ahead.
 
 ## Prior art (we do not claim "first")
 
@@ -14,7 +16,7 @@ results go in the repo. Nothing gets posted publicly without the owner's go-ahea
 | eetmie/jetson-orin-nano-vla | Split ONNX + TensorRT exports of SmolVLA and X-VLA for the 8 GB Nano | Alternative runtime path for SmolVLA/X-VLA |
 | arXiv 2604.24447 | Cross-hardware VLA leaderboard, no Orin Nano | Context only |
 
-Our angle: 7B-class models on the $249 board, plus models others skipped.
+Our angle (a plan, not a finding): 7B-class models on the 8 GB Nano, plus models others skipped. Board price claims need a source [verify] before any post.
 
 ## Hardware
 

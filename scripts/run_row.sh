@@ -20,7 +20,7 @@ OUT="$REPO/results/jetson/$ROW/$STAMP"; mkdir -p "$OUT"
 RUNTIME_COMMIT="$(git -C "$VLA_ROOT" rev-parse HEAD)"
 python3 "$REPO/scripts/capture_setup.py" \
   --run runtime=vla.cpp --run runtime_version="$RUNTIME_COMMIT" \
-  --run model_file="$(basename "$GGUF")" --run model_sha256="$(sha256sum "$GGUF" | cut -c1-16)" \
+  --run model_file="$(basename "$GGUF")" --run model_sha256="$(sha256sum "$GGUF" | cut -d" " -f1)" \
   --run arch="$ARCH" --run batch=1 --run executed_actions="$S" \
   --run sim_location="$SIM" --run task=libero_object --run task_ids="$TASK_IDS" \
   --run n_episodes_per_task="$N_EPISODES" --run warmup_excluded=3 \
@@ -48,5 +48,6 @@ else
   echo "server up on $BIND; run the client on the NUC with --out <dir>, then: touch $OUT/DONE"
   while [ ! -f "$OUT/DONE" ]; do sleep 5; done
 fi
+python3 "$REPO/scripts/capture_setup.py" > "$OUT/setup_end.json" || true  # end-of-run machine state (clocks, load, top processes)
 cp "$OUT/server_vmhwm.txt" "$OUT/server_peak_rss.txt" 2>/dev/null || true
 echo "results in $OUT"
