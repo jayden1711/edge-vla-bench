@@ -1,4 +1,7 @@
 # HANDOFF (2026-11-06)
+Status: Harness built; SmolVLA fp16 reference stopped partway; Jetson reference venv broken (libcudss)
+Next: Rsync to the Jetson, smoke test, then the SmolVLA calibration row
+Updated: 2026-11-06
 
 Session stopped at the owner's request. No benchmark rows exist yet. The first stop point
 (calibration row + SmolVLA, X-VLA, Evo-1 rows) is **not** reached.
