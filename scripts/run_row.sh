@@ -29,7 +29,7 @@ python3 "$REPO/scripts/capture_setup.py" \
 tegrastats --interval 500 --logfile "$OUT/tegrastats.log" & TS_PID=$!
 BIND="tcp://127.0.0.1:$PORT"; [ "$SIM" = remote ] && BIND="tcp://0.0.0.0:$PORT"
 # shellcheck disable=SC2086
-"$VLA_ROOT/build/bin/vla-server" --bind "$BIND" ${SERVER_ARGS:-} "$GGUF" > "$OUT/server.log" 2>&1 & SRV=$!
+"$VLA_ROOT/build/vla-server" --bind "$BIND" ${SERVER_ARGS:-} "$GGUF" > "$OUT/server.log" 2>&1 & SRV=$!
 cleanup() { kill "$SRV" "$TS_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
