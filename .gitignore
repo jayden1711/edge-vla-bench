@@ -26,3 +26,7 @@ results/
 .claude/worktrees/
 results
 .venv
+CLAUDE.md
+.claude/
+HANDOFF.md
+ORGANIZER.md
