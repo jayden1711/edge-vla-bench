@@ -65,7 +65,7 @@ reference machine is an NVIDIA GPU as well, so the NUC does **not** serve as an 
 non-NVIDIA edge hardware is tested; we make no claims about other boards.
 
 **7. "Quatern conflict."** [C]
-The author founded Quatern. Nothing in this repo depends on Quatern. The NUC is shared with Quatern workloads
+Nothing in this repo depends on Quatern. The NUC is shared with Quatern workloads
 (Quatern has priority on it), so NUC timings can be contaminated; for that reason only Jetson latency goes into the
 table (the NUC reference is used for accuracy). This was not true of the first generated table (NUC latency columns
 were filled); `summarize.py table` now blanks latency columns for non-Jetson rows. `setup.json` records load average and top processes at start;
