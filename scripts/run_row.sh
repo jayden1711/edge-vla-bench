@@ -36,7 +36,9 @@ trap cleanup EXIT
 # poll peak RSS while the server lives (VmHWM is the kernel's high-water mark of RSS)
 ( while kill -0 "$SRV" 2>/dev/null; do grep VmHWM /proc/$SRV/status 2>/dev/null > "$OUT/server_vmhwm.txt.tmp" && mv "$OUT/server_vmhwm.txt.tmp" "$OUT/server_vmhwm.txt"; sleep 1; done ) &
 
-for i in $(seq 1 600); do grep -qiE "listening|ready|bound" "$OUT/server.log" && break; kill -0 "$SRV" || { echo "server died"; tail "$OUT/server.log"; exit 1; }; sleep 1; done
+READY=0
+for i in $(seq 1 600); do grep -qiE "listening|ready|bound" "$OUT/server.log" && { READY=1; break; }; kill -0 "$SRV" || { echo "server died"; tail "$OUT/server.log"; exit 1; }; sleep 1; done
+[ "$READY" = 1 ] || { echo "server not ready after 600 s"; tail "$OUT/server.log"; exit 1; }
 
 if [ "$SIM" = local ]; then
   # shellcheck disable=SC1091
@@ -44,10 +46,18 @@ if [ "$SIM" = local ]; then
   MUJOCO_GL=egl python -I "$REPO/scripts/libero_eval.py" --vla-root "$VLA_ROOT" --arch "$ARCH" \
     --n-action-steps "$S" --task-ids "$TASK_IDS" --n-episodes "$N_EPISODES" \
     --vla-addr "tcp://127.0.0.1:$PORT" --out "$OUT/client" 2>&1 | tee "$OUT/client.log"
+  python3 "$REPO/scripts/check_eval_output.py" "$OUT/client" "$TASK_IDS" "$N_EPISODES"
 else
   echo "server up on $BIND; run the client on the NUC with --out <dir>, then: touch $OUT/DONE"
-  while [ ! -f "$OUT/DONE" ]; do sleep 5; done
+  REMOTE_MAX_WAIT_S="${REMOTE_MAX_WAIT_S:-43200}"; t0=$SECONDS
+  while [ ! -f "$OUT/DONE" ]; do
+    kill -0 "$SRV" 2>/dev/null || { echo "vla-server died while waiting for the remote client"; tail "$OUT/server.log"; exit 1; }
+    [ $((SECONDS - t0)) -lt "$REMOTE_MAX_WAIT_S" ] || { echo "no DONE file after $REMOTE_MAX_WAIT_S s"; exit 1; }
+    sleep 5
+  done
 fi
-python3 "$REPO/scripts/capture_setup.py" > "$OUT/setup_end.json" || true  # end-of-run machine state (clocks, load, top processes)
-cp "$OUT/server_vmhwm.txt" "$OUT/server_peak_rss.txt" 2>/dev/null || true
+kill -0 "$SRV" 2>/dev/null || { echo "vla-server exited during the run; results are not trustworthy"; tail "$OUT/server.log"; exit 1; }
+python3 "$REPO/scripts/capture_setup.py" > "$OUT/setup_end.json" || echo "warning: end-of-run setup capture failed" >&2  # end-of-run machine state (clocks, load, top processes)
+[ -s "$OUT/tegrastats.log" ] || { echo "tegrastats.log missing or empty"; exit 1; }
+cp "$OUT/server_vmhwm.txt" "$OUT/server_peak_rss.txt" || { echo "no server peak RSS was recorded"; exit 1; }
 echo "results in $OUT"

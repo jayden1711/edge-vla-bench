@@ -9,11 +9,13 @@ REF   ?= results/nuc/smolvla_fp16_ref/20261106T080842Z
 
 # results/TABLE.md: every row.json, with runtime/format/power mode/clocks/seed per row
 table:
-	$(PY) scripts/summarize.py table results/ > results/TABLE.md
+	$(PY) scripts/summarize.py table results/ > results/TABLE.md.tmp
+	mv results/TABLE.md.tmp results/TABLE.md
 
 # results/ATTEMPTS.md: every run dir including partial and failed ones
 attempts:
-	$(PY) scripts/summarize.py attempts results > results/ATTEMPTS.md
+	$(PY) scripts/summarize.py attempts results > results/ATTEMPTS.md.tmp
+	mv results/ATTEMPTS.md.tmp results/ATTEMPTS.md
 
 # verbatim LIBERO-Object prompts (CPU only; run through sim-run on the NUC)
 prompts:
@@ -25,7 +27,8 @@ calib-analysis:
 
 # recompute row.json files from the run dirs (reference successes passed explicitly)
 calib-row:
-	$(PY) scripts/summarize.py row $(CALIB) --model SmolVLA --params 450M --precision "GGUF as shipped" --reference-successes $$($(PY) -c "import json;print(json.load(open('$(REF)/client/eval_summary.json'))['successes'])")
+	ref=$$($(PY) -c "import json;print(json.load(open('$(REF)/client/eval_summary.json'))['successes'])") && \
+	$(PY) scripts/summarize.py row $(CALIB) --model SmolVLA --params 450M --precision "GGUF as shipped" --reference-successes "$$ref"
 ref-row:
 	$(PY) scripts/summarize.py row $(REF) --model SmolVLA --params 450M --precision "fp16 (PyTorch ref)"
 

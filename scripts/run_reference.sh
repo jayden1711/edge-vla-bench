@@ -17,4 +17,5 @@ python3 "$REPO/scripts/capture_setup.py" --run runtime=lerobot --run runtime_ver
 MUJOCO_GL=egl python -I "$REPO/scripts/libero_eval.py" --vla-root "$VLA_ROOT" --arch "$ARCH" --backend lerobot \
   --policy "$POLICY" --revision "$REV" --dtype "$DTYPE" --n-action-steps "$S" \
   --task-ids "$TASK_IDS" --n-episodes "$N_EPISODES" --out "$OUT/client" > "$OUT/client.log" 2>&1
+python3 "$REPO/scripts/check_eval_output.py" "$OUT/client" "$TASK_IDS" "$N_EPISODES"
 echo "results in $OUT"

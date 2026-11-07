@@ -5,7 +5,7 @@
       [--fits yes] [--reference-successes N]          -> writes <run_dir>/row.json
   python3 scripts/summarize.py table results/          -> prints markdown table of all row.json
 """
-import argparse, glob, json, re, statistics
+import argparse, glob, json, re, statistics, sys
 from pathlib import Path
 
 
@@ -97,6 +97,8 @@ def table(a):
     paths = [p for p in sorted(glob.glob(f"{a.root}/**/row.json", recursive=True))
              if not any(part.startswith("_") for part in Path(p).relative_to(a.root).parts)]
     rows = [json.load(open(p)) for p in paths]
+    if not rows:
+        sys.exit(f"summarize.py table: no row.json under {a.root}")
     print("| " + " | ".join(COLS) + " |\n|" + "---|" * len(COLS))
     for r in rows:
         # NUC is shared with other workloads, so only Jetson latency is reported
@@ -109,8 +111,11 @@ def table(a):
 
 def attempts(a):
     """List every run dir under root (complete, partial, failed): nothing is left out of the record."""
+    setups = sorted(glob.glob(f"{a.root}/*/*/*/setup.json"))
+    if not setups:
+        sys.exit(f"summarize.py attempts: no run dirs (*/*/*/setup.json) under {a.root}")
     print("| run_dir | has_setup | has_eval_summary | episodes | successes | has_row |\n|---|---|---|---|---|---|")
-    for s in sorted(glob.glob(f"{a.root}/*/*/*/setup.json")):
+    for s in setups:
         d = Path(s).parent
         ev = d / "client" / "eval_summary.json"
         e = json.load(open(ev)) if ev.exists() else {}
