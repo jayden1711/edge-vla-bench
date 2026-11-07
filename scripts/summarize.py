@@ -77,12 +77,19 @@ def row(a):
         "run_dir": str(d), "setup": setup,
     }
     r.update(provenance(setup, ev))
+    # Optional second memory number for the same run (owner 2026-11-07): rss_alt.json in the run dir, e.g.
+    # {"peak_rss_mib_mmprec_default": 1743, "note": "..."}. Measured separately; the headline stays peak_rss_mib.
+    alt = d / "rss_alt.json"
+    if alt.exists():
+        extra = json.loads(alt.read_text())
+        r["peak_rss_mib_mmprec_default"] = extra.get("peak_rss_mib_mmprec_default")
+        r["peak_rss_note"] = extra.get("note")
     (d / "row.json").write_text(json.dumps(r, indent=2))
     print(json.dumps({k: v for k, v in r.items() if k != "setup"}, indent=2))
 
 
 COLS = ["model", "params", "runtime", "format", "role", "power_mode", "cpu_mhz_cur", "gpu_mhz_cur", "emc_rate_hz",
-        "fits", "peak_rss_mib", "p50_ms_per_request", "p95_ms_per_request",
+        "fits", "peak_rss_mib", "peak_rss_mib_mmprec_default", "p50_ms_per_request", "p95_ms_per_request",
         "ms_per_executed_action", "hz", "success_rate", "success_delta_pp", "sim_location", "seed", "captured_utc",
         "model_ref", "model_sha256", "run_dir"]
 LATENCY_COLS = ("p50_ms_per_request", "p95_ms_per_request", "ms_per_executed_action", "hz")
@@ -105,6 +112,9 @@ def table(a):
         blank = LATENCY_COLS if r.get("role") != "jetson" else ()
         print("| " + " | ".join("" if (r.get(c) is None or c in blank) else str(r.get(c)) for c in COLS) + " |")
     print("\n" + FOOTER)
+    for r in rows:
+        if r.get("peak_rss_note"):
+            print(f"peak_rss_mib_mmprec_default ({r['model']}, {r.get('precision')}): {r['peak_rss_note']}")
     print("Rows with empty runtime/power_mode were summarized before provenance fields existed; "
           "rerun `summarize.py row` on their run dir.")
 
